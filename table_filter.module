@@ -1,0 +1,98 @@
+<?php
+
+/**
+ * @file
+ * Custom filter for tables.
+ */
+
+/**
+ * Implements hook_filter_info().
+ */
+function table_filter_filter_info() {
+  $filters['table_filter'] = array(
+    'title' => t('Table filter'),
+    'description' => t('Allows you to add classes to all tables, remove borders, make them responsive.'),
+    'process callback' => '_table_filter_process',
+    'settings callback' => '_table_filter_settings',
+    'cache' => FALSE,
+    'default settings' => array(
+      'border' => 0,
+      'cellpadding' => 0,
+      'cellspacing' => 0,
+      'classes' => 'table table-striped',
+      'wrapper' => 'table-responsive',
+    ),
+  );
+
+  return $filters;
+}
+
+/**
+ * Process table filter.
+ */
+function _table_filter_process($text, $filter) {
+  $settings = $filter->settings;
+  $dom = new DOMDocument(NULL, 'UTF-8');
+  $dom->encoding = 'UTF-8';
+  $dom->loadHTML(mb_convert_encoding($text, 'HTML-ENTITIES', 'UTF-8'), LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+  if (strlen($settings['wrapper'])) {
+    $wrapper = $dom->createElement('div');
+    $wrapper->setAttribute('class', $settings['wrapper']);
+  }
+  $tables = $dom->getElementsByTagName('table');
+  foreach ($tables as $table) {
+    $table->setAttribute('border', $settings['border']);
+    $table->setAttribute('cellpadding', $settings['cellpadding']);
+    $table->setAttribute('cellspacing', $settings['cellspacing']);
+    $table->setAttribute('class', $settings['classes']);
+
+    if (strlen($settings['wrapper'])) {
+      $wrapper_clone = $wrapper->cloneNode();
+      //Replace image with this wrapper div
+      $table->parentNode->replaceChild($wrapper_clone, $table);
+      //Append this image to wrapper div
+      $wrapper_clone->appendChild($table);
+    }
+  }
+  $text = $dom->saveHTML();
+  return $text;
+}
+
+/**
+ * Table filter form.
+ */
+function _table_filter_settings($form, &$form_state, $filter, $format, $defaults) {
+  $filter->settings += $defaults;
+
+  $settings['border'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Border size'),
+    '#default_value' => $filter->settings['border']
+  );
+
+  $settings['cellpadding'] = array(
+    '#type' => 'textfield',
+    '#title' => 'cellpadding',
+    '#default_value' => $filter->settings['cellpadding']
+  );
+
+  $settings['cellspacing'] = array(
+    '#type' => 'textfield',
+    '#title' => 'cellspacing',
+    '#default_value' => $filter->settings['cellspacing']
+  );
+
+  $settings['classes'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Classes'),
+    '#default_value' => $filter->settings['classes']
+  );
+
+  $settings['wrapper'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Wrapper'),
+    '#default_value' => $filter->settings['wrapper']
+  );
+
+  return $settings;
+}
